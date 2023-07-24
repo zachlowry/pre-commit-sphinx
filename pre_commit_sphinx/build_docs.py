@@ -1,7 +1,6 @@
 import argparse
 import os
-from typing import Optional
-from typing import Sequence
+from typing import Optional, Sequence
 
 
 def requires_build(filenames: Sequence[str], always_build: bool) -> bool:
@@ -11,15 +10,16 @@ def requires_build(filenames: Sequence[str], always_build: bool) -> bool:
         # Always return true for now (we rebuild with breathe/exhale so source code changes also require doc build)
         # In future allow rebuild e.g. only if files in the docs directory change
         pass
+
     return True
 
 
-def build(cache_dir: str, html_dir: str, src_dir: str):
+def build(builder: str, cache_dir: str, output_dir: str, src_dir: str):
     """ Invokes sphinx-build to build the docs
     """
 
     # Run Sphinx to build the documentation
-    ret = os.system(f'sphinx-build -b html -d {cache_dir} {src_dir} {html_dir}')
+    ret = os.system(f'sphinx-build -b {builder} -d {cache_dir} {src_dir} {output_dir}')
 
     # It's very weird that pre-commit marks this as 'PASSED' if I return an error code 512...! Workaround:
     return 0 if ret == 0 else 1
@@ -41,17 +41,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help='Directory to cache doctrees for fast rebuild where there are few changes',
     )
     parser.add_argument(
-        '--html-dir', type=str, default='docs/html',
-        help='Directory to output the build html',
-    )
-    parser.add_argument(
         '--source-dir', type=str, default='docs/source',
         help='Directory containing documentation sources (where the conf.py file exists)',
+    )
+    parser.add_argument(
+        '--output-dir', '--html-dir', type=str, default='docs/html',
+        help='Directory to output the documentation to',
+    )
+    parser.add_argument(
+        '--builder', type=str, default='html',
+        help='Builder to use to generate the documentation',
     )
 
     args = parser.parse_args(argv)
     if requires_build(args.filenames, args.always_build):
-        return build(args.cache_dir, args.html_dir, args.source_dir)
+        return build(args.builder, args.cache_dir, args.output_dir, args.source_dir)
 
     return 0
 
